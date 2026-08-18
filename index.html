@@ -1,0 +1,561 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Animation Playground</title>
+<style>
+  :root {
+    --bg: #0f1115;
+    --panel: #171a21;
+    --panel-2: #1e222b;
+    --line: #2a2f3a;
+    --text: #e6e8ec;
+    --muted: #8b93a1;
+    --accent: #6ea8fe;
+    --a: #c2410c;
+    --b: #1e3f66;
+    --radius: 14px;
+    font-synthesis: none;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Inter, sans-serif;
+    display: grid;
+    grid-template-columns: 248px 1fr;
+    min-height: 100vh;
+  }
+
+  /* ── Sidebar ── */
+  aside {
+    border-right: 1px solid var(--line);
+    padding: 22px 16px;
+    background: var(--panel);
+    position: sticky;
+    top: 0;
+    height: 100vh;
+    overflow-y: auto;
+  }
+  aside h1 {
+    font-size: 14px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 4px;
+  }
+  aside .tag { font-size: 11px; color: var(--muted); margin-bottom: 22px; }
+  .nav-item {
+    display: block;
+    width: 100%;
+    text-align: left;
+    background: transparent;
+    border: 1px solid transparent;
+    color: var(--text);
+    padding: 10px 12px;
+    border-radius: 9px;
+    font-size: 13.5px;
+    cursor: pointer;
+    margin-bottom: 4px;
+    transition: background 120ms, border-color 120ms;
+  }
+  .nav-item:hover { background: var(--panel-2); }
+  .nav-item.active { background: var(--panel-2); border-color: var(--line); }
+  .nav-item small { display:block; color: var(--muted); font-size: 11px; margin-top: 2px; }
+
+  /* ── Main ── */
+  main { padding: 32px 40px 80px; max-width: 1100px; }
+  .head { margin-bottom: 24px; }
+  .head h2 { font-size: 24px; font-weight: 650; }
+  .head p { color: var(--muted); font-size: 13.5px; margin-top: 6px; max-width: 60ch; }
+
+  /* ── Stage ── */
+  .stage-wrap {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 24px;
+    margin-bottom: 20px;
+  }
+  .stage {
+    position: relative;
+    height: 340px;
+    border-radius: 12px;
+    overflow: hidden;
+    background: #0a0c10;
+    border: 1px solid var(--line);
+  }
+  .screen {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    font-weight: 600;
+    will-change: transform, opacity;
+  }
+  .screen .label { font-size: 38px; letter-spacing: 0.02em; }
+  .screen .sub { font-size: 13px; opacity: 0.8; font-weight: 500; }
+  #screenA { background: linear-gradient(140deg, #c2410c, #7c2d12); color: #fff; }
+  #screenB { background: linear-gradient(140deg, #1e3f66, #0f2540); color: #fff; }
+
+  .controls {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 16px 22px;
+    margin-top: 20px;
+  }
+  .ctrl label { display:block; font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); margin-bottom: 7px; }
+  .ctrl .val { color: var(--accent); font-variant-numeric: tabular-nums; }
+  input[type=range] { width: 100%; accent-color: var(--accent); }
+  select {
+    width: 100%; background: var(--panel-2); color: var(--text);
+    border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; font-size: 13px;
+  }
+  .row { display: flex; gap: 12px; align-items: center; margin-top: 4px; }
+  .btn {
+    background: var(--accent); color: #06122b; border: none;
+    font-weight: 650; font-size: 14px; padding: 11px 22px; border-radius: 10px;
+    cursor: pointer; transition: filter 120ms;
+  }
+  .btn:hover { filter: brightness(1.08); }
+  .btn.ghost { background: var(--panel-2); color: var(--text); border: 1px solid var(--line); }
+  .toggle { display:flex; align-items:center; gap:8px; font-size:13px; color: var(--text); cursor:pointer; user-select:none; }
+  .toggle input { width:16px; height:16px; accent-color: var(--accent); }
+
+  /* ── Code ── */
+  .code-wrap { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; }
+  .code-head {
+    display:flex; align-items:center; justify-content:space-between;
+    padding: 12px 18px; border-bottom: 1px solid var(--line);
+  }
+  .code-head span { font-size: 12px; color: var(--muted); letter-spacing: 0.06em; text-transform: uppercase; }
+  .copy { background: var(--panel-2); color: var(--text); border: 1px solid var(--line);
+    font-size: 12px; padding: 6px 12px; border-radius: 7px; cursor: pointer; }
+  .copy:hover { border-color: var(--accent); }
+  pre { padding: 18px; overflow-x: auto; font-size: 12.5px; line-height: 1.65;
+    font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; color: #cdd3df; }
+  .tok-k { color: #c792ea; } .tok-s { color: #c3e88d; } .tok-n { color: #f78c6c; } .tok-c { color: #5c6370; }
+</style>
+</head>
+<body>
+  <aside>
+    <h1>Animation</h1>
+    <div class="tag">Playground &middot; reusable across projects</div>
+    <nav id="nav"></nav>
+  </aside>
+
+  <main>
+    <div class="head">
+      <h2 id="title">—</h2>
+      <p id="desc">—</p>
+    </div>
+
+    <div class="stage-wrap">
+      <div class="stage" id="stage">
+        <div class="screen" id="screenA"><div class="label">A</div><div class="sub">current screen</div></div>
+        <div class="screen" id="screenB"><div class="label">B</div><div class="sub">next screen</div></div>
+      </div>
+
+      <div class="controls" id="controls"></div>
+
+      <div class="row" style="margin-top:20px;">
+        <button class="btn" id="playFwd">▶ Play  A → B</button>
+        <button class="btn ghost" id="playBack">◀ Reverse  B → A</button>
+        <label class="toggle"><input type="checkbox" id="loop" /> loop</label>
+      </div>
+    </div>
+
+    <div class="code-wrap">
+      <div class="code-head">
+        <span id="codeLabel">framer-motion variant</span>
+        <button class="copy" id="copyBtn">Copy</button>
+      </div>
+      <pre id="code"></pre>
+    </div>
+  </main>
+
+<script>
+/* ============================================================================
+   ANIMATION LIBRARY — framework
+   Each transition is ONE entry. To add a new one, append an object with:
+     id, name, blurb, controls[], apply(elA, elB, dir, v), snippet(v)
+   `apply` runs the live demo via the Web Animations API (instant, replayable).
+   `snippet` returns the framer-motion code to paste into a real project.
+   ========================================================================== */
+
+const EASINGS = {
+  "ease-out-quint": "cubic-bezier(0.16, 1, 0.3, 1)",
+  "ease-in-out":    "cubic-bezier(0.65, 0, 0.35, 1)",
+  "ease-in":        "cubic-bezier(0.4, 0, 1, 1)",
+  "linear":         "linear",
+};
+
+const TRANSITIONS = [
+  {
+    id: "page-slide",
+    name: "Page Slide",
+    blurb: "Both screens travel in unison. Screen A slides out one way; Screen B comes in from the opposite side and settles. Optional fade. The classic 'push' / nav transition. Forward = both slide left; reverse = both slide right.",
+    controls: [
+      { key: "duration", label: "Duration", type: "range", min: 150, max: 1200, step: 10, def: 450, unit: "ms" },
+      { key: "distance", label: "Travel", type: "range", min: 50, max: 100, step: 5, def: 100, unit: "%" },
+      { key: "easing",   label: "Easing", type: "select", options: Object.keys(EASINGS), def: "ease-out-quint" },
+      { key: "fade",     label: "Fade", type: "toggle", def: true },
+    ],
+    apply(A, B, dir, v) {
+      const d = v.distance;
+      const ease = EASINGS[v.easing];
+      const dur = v.duration;
+      // dir = 1 : A→B (both move LEFT).  dir = -1 : reverse (both move RIGHT).
+      const fadeA = v.fade ? [1, 0] : [1, 1];
+      const fadeB = v.fade ? [0, 1] : [1, 1];
+      if (dir === 1) {
+        A.animate({ transform: ["translateX(0%)", `translateX(-${d}%)`], opacity: fadeA },
+                  { duration: dur, easing: ease, fill: "forwards" });
+        B.animate({ transform: [`translateX(${d}%)`, "translateX(0%)"], opacity: fadeB },
+                  { duration: dur, easing: ease, fill: "forwards" });
+      } else {
+        A.animate({ transform: [`translateX(-${d}%)`, "translateX(0%)"], opacity: [...fadeA].reverse() },
+                  { duration: dur, easing: ease, fill: "forwards" });
+        B.animate({ transform: ["translateX(0%)", `translateX(${d}%)`], opacity: [...fadeB].reverse() },
+                  { duration: dur, easing: ease, fill: "forwards" });
+      }
+    },
+    rest(A, B, v, dir) {
+      const d = v?.distance ?? 100;
+      if (dir === -1) {
+        // Reverse starts from the "B showing" state so it mirrors forward.
+        A.style.transform = `translateX(-${d}%)`; A.style.opacity = v?.fade ? 0 : 1;
+        B.style.transform = "translateX(0%)";     B.style.opacity = 1;
+      } else {
+        A.style.transform = "translateX(0%)";     A.style.opacity = 1;
+        B.style.transform = `translateX(${d}%)`;  B.style.opacity = v?.fade ? 0 : 1;
+      }
+    },
+    snippet(v) {
+      const ease = EASINGS[v.easing].replace("cubic-bezier(", "[").replace(/\)$/, "]");
+      const sec = (v.duration / 1000).toFixed(2);
+      const fadeIn  = v.fade ? "0" : "1";
+      return (
+`// PageTransition.tsx — forward (A → B), both slide LEFT
+const variants = {
+  initial: { x: "${v.distance}%", opacity: ${fadeIn} },   // incoming screen waits to the right
+  animate: {
+    x: 0,
+    opacity: 1,
+    transition: { duration: ${sec}, ease: ${ease} },
+  },
+  exit: {
+    x: "-${v.distance}%",                                   // outgoing screen leaves left
+    opacity: ${fadeIn},
+    transition: { duration: ${sec}, ease: ${ease} },
+  },
+};
+
+<AnimatePresence mode="popLayout" custom={dir}>
+  <motion.div key={pathname}
+    variants={variants}
+    initial="initial" animate="animate" exit="exit">
+    {children}
+  </motion.div>
+</AnimatePresence>`
+      );
+    },
+  },
+
+  {
+    id: "staggered-list",
+    name: "Staggered List",
+    blurb: "List rows fly in one after another from the chosen side, each offset by a small delay. The cascade. Good for a list/feed revealing after the page lands.",
+    controls: [
+      { key: "from",     label: "Fly in from", type: "select", options: ["right", "left"], def: "right" },
+      { key: "items",    label: "Rows", type: "range", min: 3, max: 8, step: 1, def: 6, unit: "" },
+      { key: "stagger",  label: "Stagger / row", type: "range", min: 20, max: 160, step: 5, def: 60, unit: "ms" },
+      { key: "duration", label: "Row duration", type: "range", min: 150, max: 900, step: 10, def: 380, unit: "ms" },
+      { key: "distance", label: "Travel", type: "range", min: 20, max: 240, step: 5, def: 80, unit: "px" },
+      { key: "easing",   label: "Easing", type: "select", options: Object.keys(EASINGS), def: "ease-out-quint" },
+      { key: "fade",     label: "Fade", type: "toggle", def: true },
+    ],
+    rest(A, B, v, dir) {
+      A.style.display = "none";
+      B.style.cssText +=
+        ";display:flex;flex-direction:column;gap:10px;align-items:stretch;justify-content:flex-start;padding:28px;background:#0e1118;";
+      const n = Math.round(v?.items ?? 6);
+      const sign = (v?.from === "left") ? -1 : 1;
+      const dist = v?.distance ?? 80;
+      const fade0 = v?.fade ? 0 : 1;
+      // dir === 1 (Play): start BLANK — rows offset & invisible, ready to fly in.
+      // dir === -1 (Reverse): start SHOWN — rows in place, ready to fly out.
+      const blank = dir !== -1;
+      B.innerHTML = "";
+      this._rows = [];
+      for (let i = 0; i < n; i++) {
+        const row = document.createElement("div");
+        row.style.cssText =
+          "height:34px;border-radius:9px;border:1px solid #2a2f3a;" +
+          "background:linear-gradient(90deg,#1e3f66,#16314f);" +
+          "display:flex;align-items:center;padding:0 14px;color:#cdd9ee;" +
+          "font-size:13px;font-weight:600;will-change:transform,opacity;";
+        row.textContent = "Row " + (i + 1);
+        if (blank) {
+          row.style.transform = `translateX(${sign * dist}px)`;
+          row.style.opacity = String(fade0);
+        }
+        B.appendChild(row);
+        this._rows.push(row);
+      }
+    },
+    apply(A, B, dir, v) {
+      const sign = v.from === "right" ? 1 : -1;
+      const ease = EASINGS[v.easing];
+      const rows = this._rows || [];
+      const fade0 = v.fade ? 0 : 1;
+      rows.forEach((row, i) => {
+        const fromX = `translateX(${sign * v.distance}px)`;
+        const frames =
+          dir === 1
+            ? { transform: [fromX, "translateX(0)"], opacity: [fade0, 1] }
+            : { transform: ["translateX(0)", fromX], opacity: [1, fade0] };
+        const delay = i * v.stagger; // always top → bottom, in and out
+        row.animate(frames, { duration: v.duration, easing: ease, delay, fill: "forwards" });
+      });
+    },
+    snippet(v) {
+      const ease = EASINGS[v.easing].replace("cubic-bezier(", "[").replace(/\)$/, "]");
+      const sec = (v.duration / 1000).toFixed(2);
+      const stg = (v.stagger / 1000).toFixed(3);
+      const sign = v.from === "right" ? "" : "-";
+      const fadeIn = v.fade ? "0" : "1";
+      return (
+`// List container maps rows; each row is a motion.div.
+// Fly in from the ${v.from}, ${v.stagger}ms apart.
+{rows.map((row, i) => (
+  <motion.div
+    key={row.id}
+    initial={{ x: ${sign}${v.distance}, opacity: ${fadeIn} }}
+    animate={{ x: 0, opacity: 1 }}
+    transition={{
+      duration: ${sec},
+      ease: ${ease},
+      delay: i * ${stg},          // the stagger
+    }}
+  >
+    {/* row content */}
+  </motion.div>
+))}
+
+// NOTE: if these rows also use layoutId for a detail morph,
+// gate the layoutId off during page-slide transitions (use a
+// MorphContext) — layoutId + ancestor transform conflict.`
+      );
+    },
+  },
+
+  {
+    id: "card-morph",
+    name: "Card Morph",
+    blurb: "A list card expands into the detail page's header card — same element, size + position interpolate. The list backdrop fades out; the detail content below the header cascades in. The classic list → detail transition.",
+    controls: [
+      { key: "duration", label: "Morph duration", type: "range", min: 200, max: 1000, step: 10, def: 480, unit: "ms" },
+      { key: "easing",   label: "Easing", type: "select", options: Object.keys(EASINGS), def: "ease-out-quint" },
+      { key: "stagger",  label: "Content stagger", type: "range", min: 0, max: 140, step: 5, def: 55, unit: "ms" },
+      { key: "lift",     label: "Header shadow", type: "toggle", def: true },
+    ],
+    _SRC: "left:7%;top:206px;width:54%;height:48px;border-radius:10px;",
+    _TGT: "left:5%;top:20px;width:90%;height:92px;border-radius:14px;",
+    rest(A, B, v, dir) {
+      A.style.display = "none";
+      B.style.cssText += ";background:#0e1118;";
+      const inMode = dir !== -1;
+      const pos = inMode ? this._SRC : this._TGT;
+      const av = inMode ? 28 : 46;
+      const nameSz = inMode ? 13 : 19;
+      const sh = (v?.lift ? "0 10px 30px rgba(0,0,0,.45)" : "0 2px 8px rgba(0,0,0,.3)");
+      B.innerHTML =
+        `<div id="backdrop" style="position:absolute;inset:0;padding:18px;display:flex;flex-direction:column;gap:8px;opacity:${inMode ? 1 : 0};">
+           ${[0,1,2,3,4,5].map(()=>`<div style="height:40px;border-radius:8px;background:#161a22;border:1px solid #232838;"></div>`).join("")}
+         </div>
+         <div id="content" style="position:absolute;left:5%;right:5%;top:132px;display:flex;flex-direction:column;gap:10px;">
+           ${[0,1,2].map(()=>`<div class="dRow" style="height:30px;border-radius:8px;background:#161a22;border:1px solid #232838;opacity:${inMode?0:1};"></div>`).join("")}
+         </div>
+         <div id="card" style="position:absolute;${pos}background:linear-gradient(135deg,#1e3f66,#0f2540);border:1px solid #2a3550;color:#dce6f5;display:flex;align-items:center;gap:12px;padding:0 16px;box-shadow:${sh};overflow:hidden;">
+           <div id="av" style="width:${av}px;height:${av}px;border-radius:50%;background:#3b6ea5;flex:none;"></div>
+           <div><div id="nm" style="font-weight:700;font-size:${nameSz}px;line-height:1.1;">Jane Cooper</div>
+                <div style="font-size:11px;opacity:.7;margin-top:2px;">#014 · Designer · Boston</div></div>
+         </div>`;
+    },
+    apply(A, B, dir, v) {
+      const ease = EASINGS[v.easing];
+      const dur = v.duration;
+      const card = B.querySelector("#card");
+      const av = B.querySelector("#av");
+      const nm = B.querySelector("#nm");
+      const backdrop = B.querySelector("#backdrop");
+      const rows = B.querySelectorAll(".dRow");
+      const S = { left: "7%",  top: "206px", width: "54%", height: "48px", borderRadius: "10px" };
+      const T = { left: "5%",  top: "20px",  width: "90%", height: "92px", borderRadius: "14px" };
+      const from = dir === 1 ? S : T;
+      const to   = dir === 1 ? T : S;
+      const opt  = { duration: dur, easing: ease, fill: "forwards" };
+      card.animate([from, to], opt);
+      av.animate(
+        [{ width: (dir===1?28:46)+"px", height: (dir===1?28:46)+"px" },
+         { width: (dir===1?46:28)+"px", height: (dir===1?46:28)+"px" }], opt);
+      nm.animate(
+        [{ fontSize: (dir===1?13:19)+"px" }, { fontSize: (dir===1?19:13)+"px" }], opt);
+      backdrop.animate(
+        [{ opacity: dir===1?1:0 }, { opacity: dir===1?0:1 }],
+        { duration: dur*0.5, easing: ease, fill: "forwards" });
+      rows.forEach((r, i) => {
+        const a = dir===1 ? 0 : 1, b = dir===1 ? 1 : 0;
+        r.animate(
+          [{ opacity:a, transform:"translateY(8px)" }, { opacity:b, transform:"translateY(0)" }],
+          { duration: dur*0.55, easing: ease, fill: "forwards",
+            delay: dir===1 ? (dur*0.4 + i*v.stagger) : (i*v.stagger) });
+      });
+    },
+    snippet(v) {
+      const ease = EASINGS[v.easing].replace("cubic-bezier(", "[").replace(/\)$/, "]");
+      const sec = (v.duration / 1000).toFixed(2);
+      const cdur = (v.duration / 1000 * 0.55).toFixed(2);
+      const cdel = (v.duration / 1000 * 0.4).toFixed(2);
+      const stg  = (v.stagger / 1000).toFixed(3);
+      return (
+`// SHARED ELEMENT MORPH — list card ⇄ detail header card.
+// Same layoutId on both; framer-motion interpolates size + position.
+
+// List row:
+<motion.div layoutId={\`item-\${p.id}-card\`}  /* small list card */ />
+
+// Detail header:
+<motion.div
+  layoutId={\`item-\${p.id}-card\`}             /* large header card */
+  transition={{ duration: ${sec}, ease: ${ease} }}
+/>
+
+// Detail content below the header — cascades in after the morph:
+{sections.map((s, i) => (
+  <motion.div key={s.id}
+    initial={{ opacity: 0, y: 8 }}
+    animate={{ opacity: 1, y: 0 }}
+    transition={{ duration: ${cdur}, delay: ${cdel} + i * ${stg} }} />
+))}
+
+// CRITICAL: layoutId must be ON for this morph, but OFF during the
+// list↔detail page slide. Drive it from a MorphContext —
+// layoutId + an ancestor mid-transform de-syncs the morph.`
+      );
+    },
+  },
+];
+
+/* ── Framework engine (don't edit per-transition) ───────────────────────── */
+const $ = (s) => document.querySelector(s);
+const A = $("#screenA"), B = $("#screenB");
+const ORIG_A = A.innerHTML, ORIG_B = B.innerHTML;
+let current = TRANSITIONS[0];
+let values = {};
+let looping = false, loopDir = 1;
+
+// Restore the stage to its pristine two-screen state before a transition
+// sets up its own demo (so e.g. Staggered List's injected rows / hidden A
+// don't leak into Page Slide).
+function resetStage() {
+  A.style.cssText = "";
+  B.style.cssText = "";
+  A.innerHTML = ORIG_A;
+  B.innerHTML = ORIG_B;
+}
+
+function buildNav() {
+  const nav = $("#nav");
+  nav.innerHTML = "";
+  TRANSITIONS.forEach((t) => {
+    const b = document.createElement("button");
+    b.className = "nav-item" + (t === current ? " active" : "");
+    b.innerHTML = `${t.name}<small>${t.id}</small>`;
+    b.onclick = () => { current = t; selectTransition(); };
+    nav.appendChild(b);
+  });
+}
+
+function buildControls() {
+  const wrap = $("#controls");
+  wrap.innerHTML = "";
+  values = {};
+  current.controls.forEach((c) => {
+    values[c.key] = c.def;
+    const div = document.createElement("div");
+    div.className = "ctrl";
+    if (c.type === "range") {
+      div.innerHTML =
+        `<label>${c.label} <span class="val" id="v_${c.key}">${c.def}${c.unit||""}</span></label>
+         <input type="range" min="${c.min}" max="${c.max}" step="${c.step}" value="${c.def}" id="i_${c.key}">`;
+      wrap.appendChild(div);
+      const inp = div.querySelector("input");
+      inp.oninput = () => {
+        values[c.key] = Number(inp.value);
+        $("#v_"+c.key).textContent = inp.value + (c.unit||"");
+        refreshCode();
+      };
+    } else if (c.type === "select") {
+      div.innerHTML =
+        `<label>${c.label}</label>
+         <select id="i_${c.key}">${c.options.map(o=>`<option ${o===c.def?"selected":""}>${o}</option>`).join("")}</select>`;
+      wrap.appendChild(div);
+      div.querySelector("select").onchange = (e) => { values[c.key] = e.target.value; refreshCode(); };
+    } else if (c.type === "toggle") {
+      div.innerHTML =
+        `<label>${c.label}</label>
+         <label class="toggle"><input type="checkbox" id="i_${c.key}" ${c.def?"checked":""}> enabled</label>`;
+      wrap.appendChild(div);
+      div.querySelector("input").onchange = (e) => { values[c.key] = e.target.checked; refreshCode(); };
+    }
+  });
+}
+
+function refreshCode() { $("#code").textContent = current.snippet(values); }
+
+function selectTransition() {
+  $("#title").textContent = current.name;
+  $("#desc").textContent = current.blurb;
+  buildNav();
+  buildControls();
+  resetStage();
+  current.rest(A, B, values, 1);
+  refreshCode();
+}
+
+function play(dir) {
+  resetStage();
+  current.rest(A, B, values, dir);
+  // next frame so the rest state is committed before animating
+  requestAnimationFrame(() => requestAnimationFrame(() => current.apply(A, B, dir, values)));
+}
+
+$("#playFwd").onclick  = () => play(-1);
+$("#playBack").onclick = () => play(1);
+$("#copyBtn").onclick  = () => {
+  navigator.clipboard.writeText(current.snippet(values));
+  $("#copyBtn").textContent = "Copied";
+  setTimeout(() => $("#copyBtn").textContent = "Copy", 1200);
+};
+$("#loop").onchange = (e) => {
+  looping = e.target.checked;
+  if (looping) loopTick();
+};
+function loopTick() {
+  if (!looping) return;
+  play(loopDir);
+  loopDir *= -1;
+  setTimeout(loopTick, values.duration + 700);
+}
+
+selectTransition();
+</script>
+</body>
+</html>
