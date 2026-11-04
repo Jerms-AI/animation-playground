@@ -31,7 +31,7 @@
    paste into a real project — tuned to the slider values.
    ========================================================================== */
 const Playground = (() => {
-  const GROUPS = ['Navigation', 'Content', 'Micro-interactions', 'Scroll', 'Signature moves'];
+  const GROUPS = ['Navigation', 'Content', 'Micro-interactions', 'Scroll', 'Signature moves', 'Mood swipe', 'Logo splash'];
   const CATALOG = [];
   const EASINGS = {
     'ease-out-quint': 'cubic-bezier(0.16, 1, 0.3, 1)',
