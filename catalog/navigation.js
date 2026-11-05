@@ -322,7 +322,9 @@ ${v.push ? `.page { transition: transform ${v.duration}ms ${EASINGS[v.easing]}; 
     id: 'circle-reveal', group: 'Navigation', name: 'Circle Reveal',
     blurb: 'The next screen grows out of the control that summoned it as an expanding circle, and shrinks back into the same spot on the way out. The origin never moves, so the user always knows where the screen "lives". (StyleHelm: the chat grows from the sparkle send button.)',
     controls: [
-      { key: 'duration', label: 'Duration', type: 'range', min: 200, max: 1200, step: 10, def: 640, unit: 'ms' },
+      { key: 'duration', label: 'Open duration', type: 'range', min: 200, max: 1400, step: 10, def: 820, unit: 'ms' },
+      { key: 'closeDuration', label: 'Close duration', type: 'range', min: 200, max: 1400, step: 10, def: 640, unit: 'ms' },
+      { key: 'fadeOut', label: 'Fade out by', type: 'range', min: 0, max: 100, step: 5, def: 70, unit: '% of close' },
       { key: 'ox', label: 'Origin X', type: 'range', min: 0, max: 100, step: 1, def: 88, unit: '%' },
       { key: 'oy', label: 'Origin Y', type: 'range', min: 0, max: 100, step: 1, def: 90, unit: '%' },
       { key: 'scrim', label: 'Dim page beneath', type: 'range', min: 0, max: 60, step: 2, def: 16, unit: '%' },
@@ -351,11 +353,15 @@ ${v.push ? `.page { transition: transform ${v.duration}ms ${EASINGS[v.easing]}; 
           const R = radius();
           if (fwd === open) { B.style.clipPath = fwd ? `circle(0px at ${at()})` : `circle(${R}px at ${at()})`; B.style.opacity = fwd ? (v.fade ? 0 : 1) : 1; scrim.style.opacity = fwd ? 0 : dim; }
           open = fwd;
-          const o = opt(v); // fast-then-slow both ways: the ease-out shape reads as "settling" on open and close alike
+          const o = opt(v); if (!fwd) o.duration = v.closeDuration; // fast-then-slow both ways
+          // Closing: fade away while shrinking, gone by `fadeOut`% of the close, so it never pinches to a hard dot.
           const frames = fwd
             ? [{ clipPath: `circle(0px at ${at()})`, opacity: v.fade ? 0 : 1 }, { clipPath: `circle(${R}px at ${at()})`, opacity: 1 }]
-            : [{ clipPath: `circle(${R}px at ${at()})`, opacity: 1 }, { clipPath: `circle(0px at ${at()})`, opacity: v.fade ? 0 : 1 }];
-          return finished([B.animate(frames, o), scrim.animate({ opacity: fwd ? [0, dim] : [dim, 0] }, { ...o, duration: Math.round(v.duration * (fwd ? .6 : 1)) })]);
+            : [{ clipPath: `circle(${R}px at ${at()})` }, { clipPath: `circle(0px at ${at()})` }];
+          const anims = [B.animate(frames, o), scrim.animate({ opacity: fwd ? [0, dim] : [dim, 0] }, { ...o, duration: Math.round(o.duration * (fwd ? .6 : .8)) })];
+          // Closing: an evenly paced fade (its own easing) that ends at `fadeOut`% of the shrink.
+          if (!fwd && v.fadeOut > 0) anims.push(B.animate({ opacity: [1, 0] }, { duration: Math.round(o.duration * v.fadeOut / 100), easing: EASINGS['ease-in-out'], fill: 'forwards' }));
+          return finished(anims);
         },
       };
     },
