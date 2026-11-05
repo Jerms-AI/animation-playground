@@ -354,13 +354,15 @@ ${v.push ? `.page { transition: transform ${v.duration}ms ${EASINGS[v.easing]}; 
           if (fwd === open) { B.style.clipPath = fwd ? `circle(0px at ${at()})` : `circle(${R}px at ${at()})`; B.style.opacity = fwd ? (v.fade ? 0 : 1) : 1; scrim.style.opacity = fwd ? 0 : dim; }
           open = fwd;
           const o = opt(v); if (!fwd) o.duration = v.closeDuration; // fast-then-slow both ways
-          // Closing: fade away while shrinking, gone by `fadeOut`% of the close, so it never pinches to a hard dot.
+          // Closing: contents fade while shrinking, gone by `fadeOut`% of the close, so it never pinches to a hard dot.
           const frames = fwd
             ? [{ clipPath: `circle(0px at ${at()})`, opacity: v.fade ? 0 : 1 }, { clipPath: `circle(${R}px at ${at()})`, opacity: 1 }]
             : [{ clipPath: `circle(${R}px at ${at()})` }, { clipPath: `circle(0px at ${at()})` }];
           const anims = [B.animate(frames, o), scrim.animate({ opacity: fwd ? [0, dim] : [dim, 0] }, { ...o, duration: Math.round(o.duration * (fwd ? .6 : .8)) })];
-          // Closing: an evenly paced fade (its own easing) that ends at `fadeOut`% of the shrink.
-          if (!fwd && v.fadeOut > 0) anims.push(B.animate({ opacity: [1, 0] }, { duration: Math.round(o.duration * v.fadeOut / 100), easing: EASINGS['ease-in-out'], fill: 'forwards' }));
+          // Closing: the sheet's CONTENTS fade (evenly paced, own easing), gone by `fadeOut`% of the shrink — but the sheet
+          // surface stays solid, so the shrinking circle fully hides the page beneath until it pinches to a dot.
+          if (fwd) for (const kid of B.children) kid.getAnimations().forEach(a => a.cancel());
+          if (!fwd && v.fadeOut > 0) for (const kid of B.children) anims.push(kid.animate({ opacity: [1, 0] }, { duration: Math.round(o.duration * v.fadeOut / 100), easing: EASINGS['ease-in-out'], fill: 'forwards' }));
           return finished(anims);
         },
       };
@@ -384,6 +386,8 @@ const grow = sheet.animate(
   [{ clipPath: \`circle(0px at \${x}px \${y}px)\` }, { clipPath: \`circle(\${R}px at \${x}px \${y}px)\` }],
   { duration: ${v.duration}, easing: "${EASINGS[v.easing]}", fill: "forwards" });
 // close: play the same frames reversed with the same ease-out (fast then slow), then unmount after .finished
+// while closing, fade the sheet's CHILDREN (not the sheet) to 0 over the first ${v.fadeOut}% — the surface stays opaque
+// so the shrinking circle keeps hiding the page beneath until it is gone
 // scrim behind the sheet: opacity 0 → ${(v.scrim/100).toFixed(2)} on open (in ~60% of the time), back to 0 on close`,
       'GSAP': v => `const R = Math.hypot(Math.max(x, innerWidth - x), Math.max(y, innerHeight - y));
 gsap.fromTo(".sheet", { clipPath: \`circle(0px at \${x}px \${y}px)\` },
