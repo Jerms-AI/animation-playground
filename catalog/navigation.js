@@ -323,7 +323,7 @@ ${v.push ? `.page { transition: transform ${v.duration}ms ${EASINGS[v.easing]}; 
     blurb: 'The next screen grows out of the control that summoned it as an expanding circle, and shrinks back into the same spot on the way out. The origin never moves, so the user always knows where the screen "lives". (StyleHelm: the chat grows from the sparkle send button.)',
     controls: [
       { key: 'duration', label: 'Open duration', type: 'range', min: 200, max: 1400, step: 10, def: 820, unit: 'ms' },
-      { key: 'closeDuration', label: 'Close duration', type: 'range', min: 200, max: 1400, step: 10, def: 640, unit: 'ms' },
+      { key: 'closeDuration', label: 'Close duration', type: 'range', min: 200, max: 1400, step: 10, def: 980, unit: 'ms' },
       { key: 'fadeOut', label: 'Fade out by', type: 'range', min: 0, max: 100, step: 5, def: 70, unit: '% of close' },
       { key: 'ox', label: 'Origin X', type: 'range', min: 0, max: 100, step: 1, def: 88, unit: '%' },
       { key: 'oy', label: 'Origin Y', type: 'range', min: 0, max: 100, step: 1, def: 90, unit: '%' },
