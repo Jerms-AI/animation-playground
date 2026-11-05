@@ -317,4 +317,65 @@ ${v.push ? `.page { transition: transform ${v.duration}ms ${EASINGS[v.easing]}; 
 // drawer.play() / drawer.reverse()`,
     },
   });
+  /* 6 ── Circle Reveal ─────────────────────────────────────────────────── */
+  register({
+    id: 'circle-reveal', group: 'Navigation', name: 'Circle Reveal',
+    blurb: 'The next screen grows out of the control that summoned it as an expanding circle, and shrinks back into the same spot on the way out. The origin never moves, so the user always knows where the screen "lives". (StyleHelm: the chat grows from the sparkle send button.)',
+    controls: [
+      { key: 'duration', label: 'Duration', type: 'range', min: 200, max: 1000, step: 10, def: 420, unit: 'ms' },
+      { key: 'ox', label: 'Origin X', type: 'range', min: 0, max: 100, step: 1, def: 88, unit: '%' },
+      { key: 'oy', label: 'Origin Y', type: 'range', min: 0, max: 100, step: 1, def: 90, unit: '%' },
+      { key: 'fade', label: 'Fade with it', type: 'toggle', def: false },
+      easeCtl('ease-out-quint'),
+    ],
+    mount(root, v) {
+      const { A, B } = twoScreens(root, true);
+      const btn = h(`<div style="position:absolute;left:${v.ox}%;top:${v.oy}%;width:40px;height:40px;margin:-20px 0 0 -20px;border-radius:50%;background:#c2410c;box-shadow:0 6px 18px rgba(194,65,12,.45);display:grid;place-items:center;color:#fff;font-size:18px">✦</div>`);
+      A.append(btn);
+      // Radius that covers the whole stage from the origin: the distance to the farthest corner.
+      const radius = () => {
+        const w = root.clientWidth, hh = root.clientHeight, x = w * v.ox / 100, y = hh * v.oy / 100;
+        return Math.hypot(Math.max(x, w - x), Math.max(y, hh - y));
+      };
+      const at = () => `${v.ox}% ${v.oy}%`;
+      B.style.clipPath = `circle(0px at ${at()})`;
+      let open = false;
+      return {
+        play(dir) {
+          const fwd = dir === 1;
+          const R = radius();
+          if (fwd === open) { B.style.clipPath = fwd ? `circle(0px at ${at()})` : `circle(${R}px at ${at()})`; B.style.opacity = fwd ? (v.fade ? 0 : 1) : 1; }
+          open = fwd;
+          const o = opt(v); if (!fwd) o.easing = EASINGS['ease-in-out'];
+          const frames = fwd
+            ? [{ clipPath: `circle(0px at ${at()})`, opacity: v.fade ? 0 : 1 }, { clipPath: `circle(${R}px at ${at()})`, opacity: 1 }]
+            : [{ clipPath: `circle(${R}px at ${at()})`, opacity: 1 }, { clipPath: `circle(0px at ${at()})`, opacity: v.fade ? 0 : 1 }];
+          return finished([B.animate(frames, o)]);
+        },
+      };
+    },
+    snippets: {
+      'framer-motion': v => `// The screen is a fixed overlay clipped to a circle at the summoning control.
+// Measure the control's centre (viewport px) before opening; reuse it on close.
+const R = Math.hypot(Math.max(x, innerWidth - x), Math.max(y, innerHeight - y));
+<AnimatePresence>
+  {open && (
+    <motion.section className="sheet"  /* position:fixed; inset:0 */
+      initial={{ clipPath: \`circle(0px at \${x}px \${y}px)\` }}
+      animate={{ clipPath: \`circle(\${R}px at \${x}px \${y}px)\` }}
+      exit={{ clipPath: \`circle(0px at \${x}px \${y}px)\`, transition: { duration: ${sec(v.duration)}, ease: "easeInOut" } }}
+      transition={{ duration: ${sec(v.duration)}, ease: ${easeArr(v.easing)} }} />
+  )}
+</AnimatePresence>`,
+      'CSS / WAAPI': v => `// origin = centre of the control that opened the screen (viewport px)
+const R = Math.hypot(Math.max(x, innerWidth - x), Math.max(y, innerHeight - y));
+const grow = sheet.animate(
+  [{ clipPath: \`circle(0px at \${x}px \${y}px)\` }, { clipPath: \`circle(\${R}px at \${x}px \${y}px)\` }],
+  { duration: ${v.duration}, easing: "${EASINGS[v.easing]}", fill: "forwards" });
+// close: play the same frames reversed with an ease-in-out, then unmount after .finished`,
+      'GSAP': v => `const R = Math.hypot(Math.max(x, innerWidth - x), Math.max(y, innerHeight - y));
+gsap.fromTo(".sheet", { clipPath: \`circle(0px at \${x}px \${y}px)\` },
+  { clipPath: \`circle(\${R}px at \${x}px \${y}px)\`, duration: ${sec(v.duration)}, ease: "${gsapEase(v.easing)}" });`,
+    },
+  });
 })();
