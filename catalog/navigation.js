@@ -322,9 +322,10 @@ ${v.push ? `.page { transition: transform ${v.duration}ms ${EASINGS[v.easing]}; 
     id: 'circle-reveal', group: 'Navigation', name: 'Circle Reveal',
     blurb: 'The next screen grows out of the control that summoned it as an expanding circle, and shrinks back into the same spot on the way out. The origin never moves, so the user always knows where the screen "lives". (StyleHelm: the chat grows from the sparkle send button.)',
     controls: [
-      { key: 'duration', label: 'Duration', type: 'range', min: 200, max: 1000, step: 10, def: 420, unit: 'ms' },
+      { key: 'duration', label: 'Duration', type: 'range', min: 200, max: 1200, step: 10, def: 640, unit: 'ms' },
       { key: 'ox', label: 'Origin X', type: 'range', min: 0, max: 100, step: 1, def: 88, unit: '%' },
       { key: 'oy', label: 'Origin Y', type: 'range', min: 0, max: 100, step: 1, def: 90, unit: '%' },
+      { key: 'scrim', label: 'Dim page beneath', type: 'range', min: 0, max: 60, step: 2, def: 16, unit: '%' },
       { key: 'fade', label: 'Fade with it', type: 'toggle', def: false },
       easeCtl('ease-out-quint'),
     ],
@@ -332,6 +333,10 @@ ${v.push ? `.page { transition: transform ${v.duration}ms ${EASINGS[v.easing]}; 
       const { A, B } = twoScreens(root, true);
       const btn = h(`<div style="position:absolute;left:${v.ox}%;top:${v.oy}%;width:40px;height:40px;margin:-20px 0 0 -20px;border-radius:50%;background:#c2410c;box-shadow:0 6px 18px rgba(194,65,12,.45);display:grid;place-items:center;color:#fff;font-size:18px">✦</div>`);
       A.append(btn);
+      // Both screens may be near-white in a real app: a scrim over A makes the circle's edge readable.
+      const scrim = h(`<div style="position:absolute;inset:0;background:#000;opacity:0;pointer-events:none"></div>`);
+      A.after(scrim);
+      const dim = v.scrim / 100;
       // Radius that covers the whole stage from the origin: the distance to the farthest corner.
       const radius = () => {
         const w = root.clientWidth, hh = root.clientHeight, x = w * v.ox / 100, y = hh * v.oy / 100;
@@ -344,13 +349,13 @@ ${v.push ? `.page { transition: transform ${v.duration}ms ${EASINGS[v.easing]}; 
         play(dir) {
           const fwd = dir === 1;
           const R = radius();
-          if (fwd === open) { B.style.clipPath = fwd ? `circle(0px at ${at()})` : `circle(${R}px at ${at()})`; B.style.opacity = fwd ? (v.fade ? 0 : 1) : 1; }
+          if (fwd === open) { B.style.clipPath = fwd ? `circle(0px at ${at()})` : `circle(${R}px at ${at()})`; B.style.opacity = fwd ? (v.fade ? 0 : 1) : 1; scrim.style.opacity = fwd ? 0 : dim; }
           open = fwd;
-          const o = opt(v); if (!fwd) o.easing = EASINGS['ease-in-out'];
+          const o = opt(v); // fast-then-slow both ways: the ease-out shape reads as "settling" on open and close alike
           const frames = fwd
             ? [{ clipPath: `circle(0px at ${at()})`, opacity: v.fade ? 0 : 1 }, { clipPath: `circle(${R}px at ${at()})`, opacity: 1 }]
             : [{ clipPath: `circle(${R}px at ${at()})`, opacity: 1 }, { clipPath: `circle(0px at ${at()})`, opacity: v.fade ? 0 : 1 }];
-          return finished([B.animate(frames, o)]);
+          return finished([B.animate(frames, o), scrim.animate({ opacity: fwd ? [0, dim] : [dim, 0] }, { ...o, duration: Math.round(v.duration * (fwd ? .6 : 1)) })]);
         },
       };
     },
@@ -372,7 +377,8 @@ const R = Math.hypot(Math.max(x, innerWidth - x), Math.max(y, innerHeight - y));
 const grow = sheet.animate(
   [{ clipPath: \`circle(0px at \${x}px \${y}px)\` }, { clipPath: \`circle(\${R}px at \${x}px \${y}px)\` }],
   { duration: ${v.duration}, easing: "${EASINGS[v.easing]}", fill: "forwards" });
-// close: play the same frames reversed with an ease-in-out, then unmount after .finished`,
+// close: play the same frames reversed with the same ease-out (fast then slow), then unmount after .finished
+// scrim behind the sheet: opacity 0 → ${(v.scrim/100).toFixed(2)} on open (in ~60% of the time), back to 0 on close`,
       'GSAP': v => `const R = Math.hypot(Math.max(x, innerWidth - x), Math.max(y, innerHeight - y));
 gsap.fromTo(".sheet", { clipPath: \`circle(0px at \${x}px \${y}px)\` },
   { clipPath: \`circle(\${R}px at \${x}px \${y}px)\`, duration: ${sec(v.duration)}, ease: "${gsapEase(v.easing)}" });`,
